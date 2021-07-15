@@ -366,15 +366,6 @@ jobs:
           - PLUGINS=amqplib
       - image: rabbitmq:3.6-alpine
 
-  node-upstream-amqplib:
-    <<: *node-upstream-base
-    docker:
-      - image: node:12
-        environment:
-          - SERVICES=rabbitmq
-          - PLUGINS=amqplib
-      - image: rabbitmq:3.6-alpine
-
   node-amqp10:
     <<: *node-plugin-base
     docker:
@@ -382,19 +373,6 @@ jobs:
         environment:
           - SERVICES=qpid
           - PLUGINS=amqp10|rhea
-      - image: scholzj/qpid-cpp:1.38.0
-        command: -p 5673
-        environment:
-          - QPIDD_ADMIN_USERNAME=admin
-          - QPIDD_ADMIN_PASSWORD=admin
-
-  node-upstream-amqp10:
-    <<: *node-upstream-base
-    docker:
-      - image: node:12
-        environment:
-          - SERVICES=qpid
-          - PLUGINS=amqp10
       - image: scholzj/qpid-cpp:1.38.0
         command: -p 5673
         environment:
@@ -425,13 +403,9 @@ jobs:
           - LAMBDA_EXECUTOR=local
           - START_WEB=0
 
-  node-upstream-axios: *node-upstream-base
-
   node-bluebird: *node-plugin-base
 
   node-bunyan: *node-plugin-base
-
-  node-upstream-bunyan: *node-upstream-base
 
   node-cassandra:
     <<: *node-plugin-base
@@ -446,21 +420,10 @@ jobs:
 
   node-connect: *node-plugin-base
 
-  node-upstream-connect: *node-upstream-base
-
   node-cucumber: *node-plugin-base
 
   node-couchbase:
     <<: *node-plugin-base
-    docker:
-      - image: node:12
-        environment:
-          - SERVICES=couchbase
-          - PLUGINS=couchbase
-      - image: rishabhdev/couchbase-server-sandbox:latest
-
-  node-upstream-couchbase:
-    <<: *node-upstream-base
     docker:
       - image: node:12
         environment:
@@ -523,8 +486,6 @@ jobs:
 
   node-graphql: *node-plugin-base
 
-  node-upstream-graphql: *node-upstream-base
-
   node-grpc: *node-plugin-base
 
   node-hapi: *node-plugin-base
@@ -538,8 +499,6 @@ jobs:
   node-knex: *node-plugin-base
 
   node-koa: *node-plugin-base
-
-  node-upstream-koa: *node-upstream-base
 
   node-limitd-client:
     <<: *node-plugin-base
@@ -628,8 +587,6 @@ jobs:
 
   node-pino: *node-plugin-base
 
-  node-upstream-pino: *node-upstream-base
-
   node-postgres:
     <<: *node-plugin-base
     docker:
@@ -646,11 +603,7 @@ jobs:
 
   node-promise: *node-plugin-base
 
-  node-upstream-promise: *node-upstream-base
-
   node-q: *node-plugin-base
-
-  node-upstream-q: *node-upstream-base
 
   node-redis:
     <<: *node-plugin-base
@@ -684,6 +637,55 @@ jobs:
           command: yarn type:doc
       - store_artifacts:
           path: ./docs/out
+
+  # Plugin upstream tests
+
+  node-upstream-amqp10:
+    <<: *node-upstream-base
+    docker:
+      - image: node:12
+        environment:
+          - SERVICES=qpid
+          - PLUGINS=amqp10
+      - image: scholzj/qpid-cpp:1.38.0
+        command: -p 5673
+        environment:
+          - QPIDD_ADMIN_USERNAME=admin
+          - QPIDD_ADMIN_PASSWORD=admin
+
+  node-upstream-amqplib:
+    <<: *node-upstream-base
+    docker:
+      - image: node:12
+        environment:
+          - SERVICES=rabbitmq
+          - PLUGINS=amqplib
+      - image: rabbitmq:3.6-alpine
+
+  node-upstream-axios: *node-upstream-base
+
+  node-upstream-bunyan: *node-upstream-base
+
+  node-upstream-connect: *node-upstream-base
+
+  node-upstream-couchbase:
+    <<: *node-upstream-base
+    docker:
+      - image: node:12
+        environment:
+          - SERVICES=couchbase
+          - PLUGINS=couchbase
+      - image: rishabhdev/couchbase-server-sandbox:latest
+
+  node-upstream-graphql: *node-upstream-base
+
+  node-upstream-koa: *node-upstream-base
+
+  node-upstream-pino: *node-upstream-base
+
+  node-upstream-promise: *node-upstream-base
+
+  node-upstream-q: *node-upstream-base
 
   # Node upstream tests
 
