@@ -1,11 +1,58 @@
 'use strict'
 
+const http = require('http')
 const FormData = require('form-data')
 
+function wait (ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function * times (base, timeout) {
+  let attempt = 0
+  let n
+
+  // base * n is the current stride length
+  // base * (n - 1) is the sum prior steps
+  // therefore, base * n + base * (n - 1) is the final total
+  while (timeout > base * ((n = 2 ** attempt++) - 1) + base * n) {
+    yield base * n * Math.random()
+  }
+}
+
+async function backoff (base, overallTimeout, task) {
+  for (const timeout of times(base, overallTimeout)) {
+    const start = Date.now()
+    if (await task(timeout)) return
+    const remaining = timeout - (Date.now() - start)
+    if (remaining > 0) await wait(remaining)
+  }
+
+  throw new Error('Profiler agent export back-off failed')
+}
+
+function request (options, body) {
+  return new Promise((resolve, reject) => {
+    const request = http.request(options, resolve)
+    request.on('error', reject)
+    if (body) request.write(body)
+    request.end()
+  })
+}
+
+async function getBody (stream) {
+  const chunks = []
+  for await (const chunk of stream) {
+    chunks.push(chunk)
+  }
+  return Buffer.concat(chunks)
+}
+
 class AgentExporter {
-  constructor ({ url, logger } = {}) {
+  constructor ({ url, logger, uploadTimeout, backoffBase } = {}) {
     this._url = url
     this._logger = logger
+    this._uploadTimeout = uploadTimeout || 60 * 1000
+    this._backoffBase = backoffBase || 1000
   }
 
   export ({ profiles, start, end, tags }) {
@@ -51,42 +98,47 @@ class AgentExporter {
       })
     }
 
-    return new Promise((resolve, reject) => {
-      const options = {
-        method: 'POST',
-        path: '/profiling/v1/input',
-        timeout: 10 * 1000
+    const body = form.getBuffer()
+    const options = {
+      method: 'POST',
+      path: '/profiling/v1/input',
+      headers: form.getHeaders()
+    }
+
+    if (this._url.protocol === 'unix:') {
+      options.socketPath = this._url.pathname
+    } else {
+      options.protocol = this._url.protocol
+      options.hostname = this._url.hostname
+      options.port = this._url.port
+    }
+
+    this._logger.debug(() => {
+      return `Submitting agent report to: ${JSON.stringify(options)}`
+    })
+
+    return backoff(this._backoffBase, this._uploadTimeout, async (timeout) => {
+      let response
+      try {
+        response = await request({ ...options, timeout }, body)
+      } catch (err) {
+        this._logger.debug(err.stack)
+      }
+      if (!response) return false
+
+      const { statusCode } = response
+      if (statusCode >= 400) {
+        this._logger.debug(`Error from the agent: ${statusCode}`)
       }
 
-      if (this._url.protocol === 'unix:') {
-        options.socketPath = this._url.pathname
-      } else {
-        options.protocol = this._url.protocol
-        options.hostname = this._url.hostname
-        options.port = this._url.port
-      }
-
-      this._logger.debug(() => {
-        return `Submitting agent report to: ${JSON.stringify(options)}`
-      })
-
-      form.submit(options, (err, res) => {
-        if (err || !res) return reject(err)
-
-        const chunks = []
-        res.on('data', chunk => chunks.push(chunk))
-        res.on('end', () => {
-          this._logger.debug(() => {
-            return `Agent export response: ${Buffer.concat(chunks)}`
-          })
+      getBody(response).then(body => {
+        this._logger.debug(() => {
+          const bytes = body.toString('hex').match(/../g).join(' ')
+          return `Agent export response: ${bytes}`
         })
-
-        if (res.statusCode >= 400) {
-          return reject(new Error(`Error from the agent: ${res.statusCode}`))
-        }
-
-        resolve()
       })
+
+      return statusCode < 500
     })
   }
 }
