@@ -6,10 +6,6 @@
   "typings": "index.d.ts",
   "scripts": {
     "preinstall": "node scripts/preinstall.js",
-    "install": "(node scripts/should_rebuild && node-gyp-build) || exit 0",
-    "rebuild": "node-gyp rebuild --jobs=max",
-    "prebuild": "node scripts/prebuild.js",
-    "prebuilds": "node scripts/prebuilds.js",
     "protobuf": "pbjs -t static-module -w commonjs -o protobuf/profile.js protobuf/profile.proto && pbts -o protobuf/profile.d.ts protobuf/profile.js",
     "prepublishOnly": "node scripts/prepublish.js",
     "postpublish": "node scripts/postpublish.js",
@@ -56,6 +52,7 @@
     "node": ">=12"
   },
   "dependencies": {
+    "@datadog/native-metrics": "^1.0.0",
     "@datadog/sketches-js": "^1.0.4",
     "@types/node": "^10.12.18",
     "form-data": "^3.0.0",
@@ -68,8 +65,6 @@
     "methods": "^1.1.2",
     "module-details-from-path": "^1.0.3",
     "multer": "^1.4.2",
-    "nan": "^2.12.1",
-    "node-gyp-build": "^3.8.0",
     "opentracing": ">=0.12.1",
     "path-to-regexp": "^0.1.2",
     "performance-now": "^2.1.0",
@@ -115,7 +110,6 @@
     "sinon": "^8.0.4",
     "sinon-chai": "^3.4.0",
     "tape": "^4.9.1",
-    "tar": "^4.4.8",
     "wait-on": "^5.0.0"
   }
 }
